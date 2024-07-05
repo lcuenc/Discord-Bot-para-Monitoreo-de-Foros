@@ -61,26 +61,32 @@ const { Client, GatewayIntentBits, Partials, EmbedBuilder } = require('discord.j
 const axios = require('axios');
 const cheerio = require('cheerio');
 
+// Configurar el cliente de Discord con los intents necesarios
 const client = new Client({
     intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMessages
+        GatewayIntentBits.Guilds, // Necesario para recibir información de los servidores
+        GatewayIntentBits.GuildMessages // Necesario para recibir mensajes en los servidores
     ],
-    partials: [Partials.Channel]
+    partials: [Partials.Channel] // Esto es necesario si estás manejando mensajes en canales que pueden no estar en caché
 });
 
-const TOKEN = 'tu_token_aqui';
-const CHANNEL_ID_SOLICITUDES = 'ID_DEL_CANAL';
-const CHANNEL_ID_REPORTES = 'ID_DEL_CANAL';
+const TOKEN = 'tu_token_aqui'; // Reemplaza 'tu_token_aqui' con tu token real
+const CHANNEL_ID_SOLICITUDES = 'tu_id_de_canal_aqui'; // Reemplaza 'tu_id_de_canal_aqui' con el ID del canal donde quieres enviar los mensajes para solicitudes
+const CHANNEL_ID_REPORTES = 'otro_id_de_canal_aqui'; // Reemplaza 'otro_id_de_canal_aqui' con el ID del canal donde quieres enviar los mensajes para reportes
+
+// URLs del foro a monitorear
 const forumUrlSolicitudes = 'https://foro.gta.world/index.php?/forum/200-solicitudes/';
 const forumUrlReportes = 'https://foro.gta.world/index.php?/forum/48-reportes-contra-usuarios/';
-const sessionCookies = 'ingresar_cookies';
 
-let lastNotifiedTopicSolicitudes = null;
-let lastNotifiedTopicReportes = null;
-let requestCounterSolicitudes = 0;
-let requestCounterReportes = 0;
+// Cookies de sesión obtenidas desde el navegador
+const sessionCookies = 'ingresar_cookies'; // Reemplaza 'ingresar_cookies' con las cookies de tu sitio web a monitorear.
 
+let lastNotifiedTopicSolicitudes = null; // Variable para almacenar el último tema notificado de solicitudes
+let lastNotifiedTopicReportes = null; // Variable para almacenar el último tema notificado de reportes
+let requestCounterSolicitudes = 0; // Contador de solicitudes
+let requestCounterReportes = 0; // Contador de reportes
+
+// Función para verificar nuevos temas en solicitudes
 async function checkForNewTopicsSolicitudes() {
     try {
         const response = await axios.get(forumUrlSolicitudes, {
@@ -90,17 +96,23 @@ async function checkForNewTopicsSolicitudes() {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
-                'Cookie': sessionCookies
+                'Cookie': sessionCookies // Añadir cookies de sesión aquí
             }
         });
 
         const $ = cheerio.load(response.data);
+
+        // Seleccionar el último tema que no esté en la subcategoría "Archivo" y que no tenga el título "Reportes contra usuarios"
         const lastTopicElement = $('h4.ipsDataItem_title a').not('a[href*="archivo"]').not('a:contains("Reportes contra usuarios")').first();
         const title = lastTopicElement.text().trim();
         const link = lastTopicElement.attr('href');
 
+        // Chequear si ya fue notificado
         if (lastNotifiedTopicSolicitudes !== link) {
+            // Incrementar el contador de solicitudes
             requestCounterSolicitudes++;
+
+            // Enviar el mensaje al canal de Discord si es un nuevo tema
             const embed = new EmbedBuilder()
                 .setTitle(title)
                 .setURL(link)
@@ -113,6 +125,7 @@ async function checkForNewTopicsSolicitudes() {
                 channel.send({ embeds: [embed] });
             }
 
+            // Actualizar el último tema notificado
             lastNotifiedTopicSolicitudes = link;
         }
     } catch (error) {
@@ -120,6 +133,7 @@ async function checkForNewTopicsSolicitudes() {
     }
 }
 
+// Función para verificar nuevos temas en reportes
 async function checkForNewTopicsReportes() {
     try {
         const response = await axios.get(forumUrlReportes, {
@@ -129,17 +143,23 @@ async function checkForNewTopicsReportes() {
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
                 'Connection': 'keep-alive',
                 'Upgrade-Insecure-Requests': '1',
-                'Cookie': sessionCookies
+                'Cookie': sessionCookies // Añadir cookies de sesión aquí
             }
         });
 
         const $ = cheerio.load(response.data);
+
+        // Seleccionar el último tema que no esté en la subcategoría "Archivo" y que no tenga el título "Reportes contra usuarios"
         const lastTopicElement = $('h4.ipsDataItem_title a').not('a[href*="archivo"]').not('a:contains("Reportes contra usuarios")').first();
         const title = lastTopicElement.text().trim();
         const link = lastTopicElement.attr('href');
 
+        // Chequear si ya fue notificado
         if (lastNotifiedTopicReportes !== link) {
+            // Incrementar el contador de reportes
             requestCounterReportes++;
+
+            // Enviar el mensaje al canal de Discord si es un nuevo tema
             const embed = new EmbedBuilder()
                 .setTitle(title)
                 .setURL(link)
@@ -152,6 +172,7 @@ async function checkForNewTopicsReportes() {
                 channel.send({ embeds: [embed] });
             }
 
+            // Actualizar el último tema notificado
             lastNotifiedTopicReportes = link;
         }
     } catch (error) {
@@ -159,12 +180,15 @@ async function checkForNewTopicsReportes() {
     }
 }
 
+// Evento de inicio del bot
 client.on('ready', () => {
     console.log(`Logged in as ${client.user.tag}!`);
+    // Verificar nuevos temas cada 30 segundos (30000 ms) - ajusta este valor según tus necesidades
     setInterval(checkForNewTopicsSolicitudes, 30000);
     setInterval(checkForNewTopicsReportes, 30000);
 });
 
+// Iniciar sesión en Discord
 client.login(TOKEN);
 ```
 
