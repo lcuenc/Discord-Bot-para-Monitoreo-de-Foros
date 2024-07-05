@@ -1,5 +1,3 @@
-Aquí tienes el README para tu proyecto en GitHub:
-
 ---
 
 # Discord Bot para Monitoreo de Foros
